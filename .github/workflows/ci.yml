@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and test (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-x64
+            os: windows-latest
+          - platform: linux-x64
+            os: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install CMake and Ninja
+        uses: lukka/get-cmake@latest
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.8.3
+          host: ${{ matrix.platform == 'windows-x64' && 'windows' || 'linux' }}
+          target: desktop
+          arch: ${{ matrix.platform == 'windows-x64' && 'win64_mingw' || 'linux_gcc_64' }}
+          modules: qtshadertools
+          tools: ${{ matrix.platform == 'windows-x64' && 'tools_mingw1310,qt.tools.win64_mingw1310' || '' }}
+          cache: true
+
+      - name: Install Linux runtime packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            xvfb libgl1-mesa-dri libegl1 libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 \
+            libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 \
+            libxcb-xinerama0 libxcb-xfixes0
+
+      - name: Configure (Linux)
+        if: runner.os == 'Linux'
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER="$IQTA_TOOLS/mingw1310_64/bin/g++.exe"
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Unit tests
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Demo tour with screenshots (Linux, software rendering)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p tour
+          xvfb-run -a -s "-screen 0 1400x900x24" \
+            ./build/Lumina --tour "$PWD/tour" --settings "$PWD/tour-settings.ini" 2>&1 | tee tour.log
+          grep -q "TOUR stress OK" tour.log
+
+      - name: Upload screenshots
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tour-screenshots
+          path: tour/*.png
+          if-no-files-found: error
+          retention-days: 14
