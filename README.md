@@ -44,3 +44,14 @@ cmake --build build --parallel
 Run `./build/appQtQuickDemo` from the project root. If Qt is installed outside the system package paths, set `CMAKE_PREFIX_PATH` to the Qt installation prefix when configuring.
 
 The project uses the same `build` directory on each platform; configure it with that platform's compiler and Qt installation.
+
+## GitHub releases
+
+Push a version tag such as `v1.0.0` to build and publish portable packages for Windows x64 and Linux x64:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The workflow attaches `qt-custom-ui-app-windows-x64.zip` and `qt-custom-ui-app-linux-x64.tar.gz` to the GitHub Release. The Windows archive contains the executable and Qt runtime files. The Linux archive contains an AppDir folder with its launcher and bundled Qt runtime; Linux system libraries and a compatible graphics stack are still required.

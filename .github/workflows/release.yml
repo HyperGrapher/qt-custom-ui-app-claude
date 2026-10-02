@@ -1,0 +1,106 @@
+name: Build portable releases
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }} package
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-x64
+            os: windows-latest
+          - platform: linux-x64
+            os: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.8.3
+          host: ${{ matrix.platform == 'windows-x64' && 'windows' || 'linux' }}
+          target: desktop
+          arch: ${{ matrix.platform == 'windows-x64' && 'win64_mingw' || 'linux_gcc_64' }}
+          tools: ${{ matrix.platform == 'windows-x64' && 'tools_mingw1310,qt.tools.win64_mingw1310' || '' }}
+          cache: true
+
+      - name: Configure and build
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel
+
+      - name: Bundle Windows runtime
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $package = "${{ github.workspace }}\dist\qt-custom-ui-app-windows-x64"
+          New-Item -ItemType Directory -Force $package | Out-Null
+          Copy-Item build\appQtQuickDemo.exe $package
+          windeployqt --release --compiler-runtime --qmldir . --dir $package "$package\appQtQuickDemo.exe"
+          Compress-Archive -Path $package -DestinationPath dist\qt-custom-ui-app-windows-x64.zip
+
+      - name: Bundle Linux runtime
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p AppDir/usr/bin dist
+          cp build/appQtQuickDemo AppDir/usr/bin/
+          curl -L --fail --retry 3 -o linuxdeploy.AppImage \
+            https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          curl -L --fail --retry 3 -o linuxdeploy-plugin-qt-x86_64.AppImage \
+            https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy.AppImage linuxdeploy-plugin-qt-x86_64.AppImage
+          export APPIMAGE_EXTRACT_AND_RUN=1
+          export QML_SOURCES_PATHS="$GITHUB_WORKSPACE"
+          ./linuxdeploy.AppImage --appdir AppDir --executable AppDir/usr/bin/appQtQuickDemo --plugin qt
+          cat > AppDir/AppRun <<'EOF'
+          #!/bin/sh
+          APP_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+          export LD_LIBRARY_PATH="$APP_DIR/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          export QT_PLUGIN_PATH="$APP_DIR/usr/plugins"
+          export QML2_IMPORT_PATH="$APP_DIR/usr/qml"
+          exec "$APP_DIR/usr/bin/appQtQuickDemo" "$@"
+          EOF
+          chmod +x AppDir/AppRun
+          mv AppDir dist/qt-custom-ui-app-linux-x64
+          tar -czf dist/qt-custom-ui-app-linux-x64.tar.gz -C dist qt-custom-ui-app-linux-x64
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}
+          path: dist/qt-custom-ui-app-${{ matrix.platform }}.*
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download platform packages
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Publish release and packages
+        uses: softprops/action-gh-release@v3
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: release-assets/*
