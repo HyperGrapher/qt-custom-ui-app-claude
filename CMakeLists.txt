@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Add QuickControls2 here
-find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2)
+find_package(Qt6 6.3 REQUIRED COMPONENTS Quick QuickControls2)
 
 qt_standard_project_setup()
 

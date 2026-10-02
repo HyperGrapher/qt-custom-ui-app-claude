@@ -1,4 +1,4 @@
-Build a Windows 10/11 desktop GUI proof of concept using **C++ and Qt Quick/QML**.
+Build a Linux and Windows desktop GUI proof of concept using **C++ and Qt Quick/QML**. macOS is not a target platform.
 
 This project is about validating the interface, animation quality, and rendering performance. It does not need real application functionality. If successful, I may use it as the foundation for a future desktop app, so keep the implementation clean and reusable.
 
@@ -23,9 +23,9 @@ The result should feel cohesive, refined, and responsive. Avoid a generic dashbo
 
 Create a frameless window with a custom title area, rounded outer corners, and integrated minimize, maximize/restore, and close buttons.
 
-Preserve expected Windows behavior: dragging, resizing, double-clicking the title area to maximize/restore, and correct maximized sizing. Interactive controls must not accidentally drag the window.
+Preserve expected native window behavior on Linux and Windows, including dragging, resizing, double-clicking the title area to maximize/restore, and correct maximized sizing. Interactive controls must not accidentally drag the window.
 
-Handle Windows 10 and Windows 11 differences explicitly. A rounded rectangle painted inside a rectangular opaque window does not satisfy the rounded-window requirement. Use an appropriate supported implementation and explain any platform limitations.
+Handle platform differences explicitly where needed. A rounded rectangle painted inside a rectangular opaque window does not satisfy the rounded-window requirement. Use an appropriate supported implementation and explain any platform limitations.
 
 Support display scaling and keep window controls clear and usable.
 
