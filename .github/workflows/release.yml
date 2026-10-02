@@ -25,6 +25,9 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      - name: Install CMake and Ninja
+        uses: lukka/get-cmake@latest
+
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
@@ -32,13 +35,23 @@ jobs:
           host: ${{ matrix.platform == 'windows-x64' && 'windows' || 'linux' }}
           target: desktop
           arch: ${{ matrix.platform == 'windows-x64' && 'win64_mingw' || 'linux_gcc_64' }}
+          modules: qtshadertools
           tools: ${{ matrix.platform == 'windows-x64' && 'tools_mingw1310,qt.tools.win64_mingw1310' || '' }}
           cache: true
 
-      - name: Configure and build
+      - name: Configure (Linux)
+        if: runner.os == 'Linux'
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLUMINA_BUILD_TESTS=OFF
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --parallel
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DLUMINA_BUILD_TESTS=OFF \
+            -DCMAKE_CXX_COMPILER="$IQTA_TOOLS/mingw1310_64/bin/g++.exe"
+
+      - name: Build
+        run: cmake --build build --parallel
 
       - name: Bundle Windows runtime
         if: runner.os == 'Windows'
@@ -46,8 +59,8 @@ jobs:
         run: |
           $package = "${{ github.workspace }}\dist\qt-custom-ui-app-windows-x64"
           New-Item -ItemType Directory -Force $package | Out-Null
-          Copy-Item build\appQtQuickDemo.exe $package
-          windeployqt --release --compiler-runtime --qmldir . --dir $package "$package\appQtQuickDemo.exe"
+          Copy-Item build\Lumina.exe $package
+          windeployqt --release --compiler-runtime --qmldir src\qml --dir $package "$package\Lumina.exe"
           Compress-Archive -Path $package -DestinationPath dist\qt-custom-ui-app-windows-x64.zip
 
       - name: Bundle Linux runtime
@@ -56,22 +69,22 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p AppDir/usr/bin dist
-          cp build/appQtQuickDemo AppDir/usr/bin/
+          cp build/Lumina AppDir/usr/bin/
           curl -L --fail --retry 3 -o linuxdeploy.AppImage \
             https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           curl -L --fail --retry 3 -o linuxdeploy-plugin-qt-x86_64.AppImage \
             https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
           chmod +x linuxdeploy.AppImage linuxdeploy-plugin-qt-x86_64.AppImage
           export APPIMAGE_EXTRACT_AND_RUN=1
-          export QML_SOURCES_PATHS="$GITHUB_WORKSPACE"
-          ./linuxdeploy.AppImage --appdir AppDir --executable AppDir/usr/bin/appQtQuickDemo --plugin qt
+          export QML_SOURCES_PATHS="$GITHUB_WORKSPACE/src/qml"
+          ./linuxdeploy.AppImage --appdir AppDir --executable AppDir/usr/bin/Lumina --plugin qt
           cat > AppDir/AppRun <<'EOF'
           #!/bin/sh
           APP_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
           export LD_LIBRARY_PATH="$APP_DIR/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
           export QT_PLUGIN_PATH="$APP_DIR/usr/plugins"
           export QML2_IMPORT_PATH="$APP_DIR/usr/qml"
-          exec "$APP_DIR/usr/bin/appQtQuickDemo" "$@"
+          exec "$APP_DIR/usr/bin/Lumina" "$@"
           EOF
           chmod +x AppDir/AppRun
           mv AppDir dist/qt-custom-ui-app-linux-x64
