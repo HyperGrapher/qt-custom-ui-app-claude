@@ -1,6 +1,6 @@
 # Implementation Plan — "Lumina" Qt Quick UI Proof of Concept
 
-Status: **Draft for review.** No code is written until this plan is approved.
+Status: **Approved and implemented.** See section 8 for decisions made during implementation.
 
 Source requirements: [`docs/PRD.md`](PRD.md).
 
@@ -395,15 +395,25 @@ DPI. The Windows code will at least be compiled by GitHub Actions (see open ques
 
 ---
 
-## 7. Open questions for you
+## 7. Decisions on the open questions
 
-1. **Name**: is "Lumina" fine as the placeholder app name?
-2. **Windows 10**: how important are rounded corners there? (Windows 11 will use native
-   DWM rounded corners. On Windows 10, square corners are the safest fallback.)
-3. **Fonts**: OK to bundle **Inter** (UI text, OFL license) and **Phosphor** icon font
-   (MIT license) in `resources/fonts/`?
-4. **CI**: should I add a small GitHub Actions workflow that builds on every push for
-   Linux and Windows (so Windows-only code is at least compiled)? The current workflow
-   only runs on version tags.
-5. **Minimum Qt version**: OK to target Qt 6.8 while keeping 6.4 compatibility for
-   testing in this environment?
+1. Name: "Lumina" is fine.
+2. Windows 10: square corners are acceptable; no extra complexity for rounding there.
+3. Fonts: Inter and the Phosphor icon font are bundled in `resources/fonts/` with licenses.
+4. CI: `.github/workflows/ci.yml` builds and tests on every push (Linux and Windows).
+5. Qt version: target Qt 6.8 (CI and releases); the code still builds with Qt 6.4 for local
+   testing here. The author will also build with Qt 6.11 on Windows.
+
+---
+
+## 8. Implementation notes (changes from the plan, with reasons)
+
+| Topic | Plan | Implemented | Why |
+|---|---|---|---|
+| Ambient clock | QML timer or per-frame driver, pick by measurement | C++ `AmbientClock` with a plain `QTimer` (30 Hz) | A QML `Timer` runs on Qt Quick's animation driver and kept rendering at full display rate (measured 60–100 FPS instead of 30). |
+| Background resolution | Aurora rendered at ½–⅓ resolution through a layer | One full-resolution pass (`aurora.frag` also does vignette, rim, dithering, rounded corners) | The updating layer made Qt Quick render an extra frame per update (measured 60 instead of 30 FPS). The full-resolution shader was made cheaper instead: gamma 2.0 math, and the mood-spread math is skipped when no spread runs. |
+| Button breathing glow | Own looping animation | Driven from the ambient clock | A looping animation (and a `Behavior` reacting to each tick) forces full-rate rendering; the clock-driven pulse pauses with all ambient motion. |
+| Windows frame | Native frame styles + `WM_NCCALCSIZE` / `WM_NCHITTEST` | `Qt::FramelessWindowHint` + DWM corner preference; move/resize via `startSystemMove` / `startSystemResize` | Same user-visible result on Windows 11 (OS-rounded corners, Aero Snap by drag, edge resize) with far less native code, and no way to test native hit-testing here. Snap Layouts flyout remains a stretch goal. |
+| Window buttons | Vector shapes | Icon-font glyphs (Phosphor) | Also vector and sharp at any scale, and consistent with all other icons. |
+| X11 compositor detection | Detect what we can | Not detected; `--no-translucency` flag documented | Reliable detection needs X11-specific code; the flag is the simple, explicit way out. |
+| Local Qt | Install Qt 6.8 | Ubuntu's Qt 6.4.2 locally; Qt 6.8.3 in CI | Qt's download servers are blocked in this environment. CI runs the same build, tests and tour on 6.8.3. |

@@ -58,10 +58,8 @@ QtObject {
     readonly property color warning: "#FFB547"
 
     // Background
-    // The aurora is very soft, so it renders at a fraction of the window resolution and is
-    // scaled up. 0.4 cuts its pixel work by about 6x with no visible difference.
-    readonly property real backgroundResolutionScale: 0.4
-    // Ambient motion is slow enough to update at 30 Hz; 0 would mean every rendered frame.
+    // Ambient motion is slow enough to update at 30 Hz; it looks as smooth as 60 Hz and
+    // renders half the frames when nothing else moves.
     readonly property int ambientFrameRate: 30
     readonly property var ambientSpeeds: [0.5, 1.0, 1.8]
 

@@ -18,6 +18,7 @@ qt_add_executable(Lumina WIN32
 )
 
 set(LUMINA_CPP_SOURCES
+    src/AmbientClock.h src/AmbientClock.cpp
     src/AppSettings.h src/AppSettings.cpp
     src/CollectionModel.h src/CollectionModel.cpp
     src/FrameStats.h src/FrameStats.cpp
@@ -69,7 +70,6 @@ set(LUMINA_QML_FILES
     src/qml/controls/StepTimeline.qml
     src/qml/controls/StyledSlider.qml
     src/qml/controls/ToggleSwitch.qml
-    src/qml/effects/AmbientClock.qml
     src/qml/effects/AuroraBackground.qml
     src/qml/effects/EnergyOrb.qml
     src/qml/effects/SoftShadow.qml
@@ -100,7 +100,6 @@ qt_add_shaders(Lumina "lumina_shaders"
     BASE src/shaders
     FILES
         src/shaders/aurora.frag
-        src/shaders/finish.frag
         src/shaders/glass.frag
         src/shaders/orb.frag
         src/shaders/ring.frag

@@ -73,6 +73,7 @@ Window {
 
         running: root.ambientActive
         speed: Theme.ambientSpeeds[root.appSettings.ambientSpeed]
+        frameRate: Theme.ambientFrameRate
     }
 
     SoftShadow {

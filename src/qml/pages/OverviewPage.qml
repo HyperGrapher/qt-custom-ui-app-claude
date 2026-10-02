@@ -73,7 +73,7 @@ PageBase {
             y: orb.y + hero.orbSize * 0.86
             text: qsTr("Run demo")
             glyph: Icons.play
-            breathing: page.isCurrent
+            breath: page.isCurrent ? 0.5 + 0.5 * Math.sin(page.ambientTime * 1.7) : 0
             opacity: page.reveal(2)
             transform: Translate { y: page.revealShift(2) }
             onClicked: page.runDemo()

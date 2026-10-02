@@ -2,12 +2,12 @@ import QtQuick
 import QtQuick.Controls
 
 // Main call-to-action button: accent gradient pill with a glow that reacts to hover and
-// press. "breathing" adds a slow pulse to the glow (hero use only; off with reduced motion).
+// press. "breath" (0..1) lets the owner pulse the glow from the shared ambient clock, so the
+// pulse needs no animation of its own and pauses together with all ambient motion.
 Button {
     id: control
 
     property string glyph: ""
-    property bool breathing: false
     property real breath: 0
 
     implicitHeight: 44
@@ -20,14 +20,6 @@ Button {
     Behavior on scale { NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
     Behavior on opacity { NumberAnimation { duration: Motion.normal } }
 
-    SequentialAnimation on breath {
-        running: control.breathing && control.enabled && !Motion.reducedMotion
-        loops: Animation.Infinite
-        onRunningChanged: if (!running) control.breath = 0
-        NumberAnimation { to: 1; duration: 1800; easing.type: Easing.InOutSine }
-        NumberAnimation { to: 0; duration: 1800; easing.type: Easing.InOutSine }
-    }
-
     background: Item {
         SoftShadow {
             anchors.fill: pill
@@ -37,9 +29,14 @@ Button {
             radius: pill.radius
             blur: 22
             color: Theme.withAlpha(Theme.accent, 0.7)
-            opacity: !control.enabled ? 0 : control.down ? 0.35 : control.hovered ? 0.95 : 0.55 + 0.3 * control.breath
+            // State changes are animated; the breath is added directly, because animating
+            // each ambient tick would keep an animation (and full-rate rendering) running.
+            property real stateGlow: !control.enabled ? 0 : control.down ? 0.35 : control.hovered ? 0.95 : 0.55
+            readonly property bool breathes: control.enabled && !control.down && !control.hovered
 
-            Behavior on opacity { NumberAnimation { duration: Motion.normal } }
+            opacity: stateGlow + (breathes ? 0.3 * control.breath : 0)
+
+            Behavior on stateGlow { NumberAnimation { duration: Motion.normal } }
         }
 
         Rectangle {

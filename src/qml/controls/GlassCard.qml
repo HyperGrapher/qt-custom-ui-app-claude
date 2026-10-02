@@ -70,7 +70,7 @@ Item {
         property real highlightAmount: card.lightPlay ? 1 : 0
         property real devicePixelRatio: Screen.devicePixelRatio
         property size itemSize: Qt.size(width, height)
-        property point pointer: Qt.point(width * 0.3, 0)
+        property point pointer
         property color fillColor: Qt.rgba(1, 1, 1, 0.07)
         property color tintColor: Theme.accent
 

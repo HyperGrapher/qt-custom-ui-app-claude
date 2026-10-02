@@ -1,8 +1,7 @@
 import QtQuick
 
-// Animated window background. The aurora shader renders into a reduced-resolution layer
-// (it is very soft, so nothing is lost), then a finishing pass scales it up and applies the
-// vignette, dithering and the rounded window corners.
+// Animated window background: one shader pass draws the aurora, the vignette and the
+// antialiased rounded window corners.
 Item {
     id: background
 
@@ -60,7 +59,9 @@ Item {
         anchors.fill: parent
 
         property real time: background.time
-        property real aspect: width / Math.max(1, height)
+        property real cornerRadius: background.cornerRadius
+        property real devicePixelRatio: Screen.devicePixelRatio
+        property size itemSize: Qt.size(width, height)
         property real spread: 1
         property real uniformBlend: 0
         property real intensity: background.intensity
@@ -77,18 +78,6 @@ Item {
         property color toBase
 
         fragmentShader: "qrc:/shaders/aurora.frag.qsb"
-
-        layer.enabled: true
-        layer.smooth: true
-        layer.textureSize: Qt.size(Math.max(1, Math.ceil(width * Theme.backgroundResolutionScale)),
-                                   Math.max(1, Math.ceil(height * Theme.backgroundResolutionScale)))
-        layer.effect: ShaderEffect {
-            property real cornerRadius: background.cornerRadius
-            property real devicePixelRatio: Screen.devicePixelRatio
-            property size itemSize: Qt.size(width, height)
-
-            fragmentShader: "qrc:/shaders/finish.frag.qsb"
-        }
     }
 
     NumberAnimation {
